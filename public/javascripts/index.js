@@ -1,4 +1,8 @@
-let camera, controls, scene, renderer, planets = [], t = 0;
+let camera, controls, scene, renderer, planets = [], ship, speed = 0.007;
+
+// direction vector for movement
+var direction = new THREE.Vector3(1, 0, 0);
+
 
 class Planet {
 
@@ -142,26 +146,60 @@ function init() {
     scene.add(sprite);
 
     //Planets creation
-    let first = new Planet("Second", 0.002, 40, 0.0076)
-        .setTexture("images/planets/earth/earthmap1k.jpg").setNormalMap("images/planets/earth/earthbump1k.jpg").setSpecMap("images/planets/earth/earthspec1k.jpg")
+    let first = new Planet("First", 0.002, 60, 0.0036)
+        .setTexture("images/planets/earth/earthmap1k.jpg")
+        .setNormalMap("images/planets/earth/earthbump1k.jpg").setSpecMap("images/planets/earth/earthspec1k.jpg")
         .setGeometry(2, 20, 20)
         .setMaterial()
         .create();
     planets.push(first);
 
-
-    let second = new Planet("First", 0.002, 60, 0.003)
-        .setTexture("images/planet-512.jpg").setNormalMap("images/normal-map-512.jpg").setSpecMap("images/water-map-512.jpg")
+    let second = new Planet("Second", 0.002, 40, 0.003)
+        .setTexture("images/planets/exoplanet/planet-512.jpg")
+        .setNormalMap("images/planets/exoplanet/normal-map-512.jpg").setSpecMap("images/planets/exoplanet/water-map-512.jpg")
         .setGeometry(1, 20, 20)
         .setMaterial()
         .create();
     planets.push(second);
 
+    let third = new Planet("Third", 0.009, 20, 0.0043).setTexture('images/planets/mercury/mercurymap.jpg')
+        .setNormalMap('images/planets/mercury/mercurybump.jpg')
+        .setGeometry(0.7, 20, 20)
+        .setMaterial()
+        .create();
+    planets.push(third);
+
+    let fourth = new Planet("Fourth", 0.0056, 150, 0.0013).setTexture('images/planets/neptune/neptunemap.jpg')
+        .setGeometry(2.5, 20, 20)
+        .setMaterial()
+        .create();
+    planets.push(fourth);
+
+    let fifth = new Planet("Fifth", 0.0015, 120, 0.0019).setTexture('images/planets/jupiter/jupitermap.jpg')
+        .setGeometry(5, 20, 20)
+        .setMaterial()
+        .create();
+    planets.push(fifth);
+
+    let sixth = new Planet("Sixth", 0.002, 85, 0.0024).setTexture('images/planets/mars/marsmap.jpg')
+        .setGeometry(2.7, 20, 20)
+        .setMaterial()
+        .create();
+    planets.push(sixth);
 
     //add Planets to scene
     planets.forEach(function (planet) {
         scene.add(planet.getInstance);
     });
+
+    let shipGeometry = new THREE.CylinderGeometry(0, 0.3, 0.9, 3, 1);
+    let shipMaterials = new THREE.MeshBasicMaterial({
+        color: 0x00ff00
+    });
+
+    ship = new THREE.Mesh(shipGeometry, shipMaterials);
+    ship.position.set(0,20,0);
+    scene.add(ship);
 
     //Space background is a large sphere
     let spaceSphereGeometry = new THREE.SphereGeometry(200, 20, 20);
@@ -198,6 +236,13 @@ function init() {
 
     window.addEventListener('resize', onWindowResize, false);
 }
+
+function move() {
+    var vector = direction.clone().multiplyScalar(speed, speed, speed);
+    ship.position.x += vector.x;
+    ship.position.y += vector.y;
+    ship.position.z += vector.z;
+}
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -209,6 +254,7 @@ function animate() {
     render();
 }
 function render() {
+    move();
     planets.forEach(function (planet) {
         planet.rotate(planet.rotateSpeed);
         planet.spin(planet.getSpinSpeed);
