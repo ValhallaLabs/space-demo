@@ -1,9 +1,13 @@
-var camera, controls, scene, renderer, planet;
+let camera, controls, scene, renderer, planets = [], t = 0;
 
 class Planet {
 
-    constructor(name) {
+    constructor(name, rotateSpeed, distance, spinSpeed) {
         this.name = name;
+        this.rotateSpeed = rotateSpeed;
+        this.spinSpeed = spinSpeed;
+        this.distance = distance;
+        this.t = 0;
     }
 
     create() {
@@ -61,7 +65,12 @@ class Planet {
     }
 
     rotate(speed) {
-        this.planet.rotation.y += speed || 0.002;
+        this.planet.rotation.y += speed || this.rotateSpeed;
+    }
+
+    spin(t) {
+        this.planet.position.x = this.distance * Math.cos(t);
+        this.planet.position.z = this.distance * Math.sin(t);
     }
 
     move(x, y, z) {
@@ -78,6 +87,22 @@ class Planet {
         return this.planet;
     }
 
+    get getSpinSpeed() {
+        this.t += this.spinSpeed;
+        return this.t;
+    }
+
+}
+
+class Sun extends Planet {
+    constructor(name) {
+        super(name);
+        this.setTexture('images/planets/sunmap.jpg')
+            .setGeometry(5, 20, 20)
+            .setMaterial()
+            .create();
+        this.move(0, 0, 0);
+    }
 }
 
 init();
@@ -103,32 +128,51 @@ function init() {
     controls.enableZoom = true;
     controls.enablePan = false;
 
-    var sun = new Planet('Sun').setTexture('images/planets/sunmap.jpg')
-        .setGeometry(5, 20, 20)
+    //Create Sun
+    scene.add( new Sun('Sun').getInstance);
+
+    //Sun's glowing
+    var spriteMaterial = new THREE.SpriteMaterial(
+        {
+            map: new THREE.ImageUtils.loadTexture('images/glow.png'), useScreenCoordinates: false,
+            color: 0xFFFFE0, transparent: false, blending: THREE.AdditiveBlending
+        });
+    var sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(30, 30, 0.4);
+    scene.add(sprite);
+
+    //Planets creation
+    let first = new Planet("Second", 0.002, 40, 0.0076)
+        .setTexture("images/planets/earth/earthmap1k.jpg").setNormalMap("images/planets/earth/earthbump1k.jpg").setSpecMap("images/planets/earth/earthspec1k.jpg")
+        .setGeometry(2, 20, 20)
         .setMaterial()
         .create();
-    sun.move(0, 0, 0);
-    scene.add(sun.getInstance);
+    planets.push(first);
 
-    planet = new Planet("First")
+
+    let second = new Planet("First", 0.002, 60, 0.003)
         .setTexture("images/planet-512.jpg").setNormalMap("images/normal-map-512.jpg").setSpecMap("images/water-map-512.jpg")
         .setGeometry(1, 20, 20)
         .setMaterial()
         .create();
-    planet.move(100, 0, 0);
-    scene.add(planet.getInstance);
+    planets.push(second);
 
+
+    //add Planets to scene
+    planets.forEach(function (planet) {
+        scene.add(planet.getInstance);
+    });
 
     //Space background is a large sphere
-    var spaceSphereGeometry = new THREE.SphereGeometry(200, 20, 20);
-    var spaceSphereMaterial = new THREE.MeshBasicMaterial(
+    let spaceSphereGeometry = new THREE.SphereGeometry(200, 20, 20);
+    let spaceSphereMaterial = new THREE.MeshBasicMaterial(
         {
             map: THREE.ImageUtils.loadTexture('images/galaxy_starfield.png'),
             overdraw: 0.5
         });
 
 
-    var spaceSphere = new THREE.Mesh(spaceSphereGeometry, spaceSphereMaterial);
+    let spaceSphere = new THREE.Mesh(spaceSphereGeometry, spaceSphereMaterial);
 
     //spacesphere needs to be double sided as the camera is within the spacesphere
     spaceSphere.material.side = THREE.DoubleSide;
@@ -149,17 +193,7 @@ function init() {
     camera.lookAt(scene.position);
 
     //lights
-    light = new THREE.DirectionalLight(0xffffff);
-    light.position.set(1, 1, 1);
-    scene.add(light);
-    light = new THREE.DirectionalLight(0x002288);
-    light.position.set(-1, -1, -1);
-    scene.add(light);
-    light = new THREE.AmbientLight(0x222222);
-    scene.add(light);
-
-    var light = new THREE.PointLight(0xffffff, 10, 50, 2);
-    light.position.set(0, 0, 0);
+    var light = new THREE.AmbientLight(0x848484); // soft white light
     scene.add(light);
 
     window.addEventListener('resize', onWindowResize, false);
@@ -171,10 +205,13 @@ function onWindowResize() {
 }
 function animate() {
     requestAnimationFrame(animate);
-    controls.update(); // required if controls.enableDamping = true, or if controls.autoRotate = true
+    controls.update();
     render();
 }
 function render() {
-    planet.rotate(0.002);
+    planets.forEach(function (planet) {
+        planet.rotate(planet.rotateSpeed);
+        planet.spin(planet.getSpinSpeed);
+    });
     renderer.render(scene, camera);
 }
