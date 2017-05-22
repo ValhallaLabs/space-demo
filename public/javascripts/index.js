@@ -1,8 +1,9 @@
 let camera, controls, scene, renderer, planets = [], ship, speed = 0.007;
 
 // direction vector for movement
-var direction = new THREE.Vector3(1, 0, 0);
-
+var direction = new THREE.Vector3(1, 0, 0),
+    clock = new THREE.Clock(),
+    keyboard = new THREEx.KeyboardState();
 
 class Planet {
 
@@ -126,22 +127,22 @@ function init() {
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.minDistance = 20;
-    controls.autoRotate = true;
-    controls.autoRotateSpeed = 1;
+    /*controls.autoRotate = true;
+     controls.autoRotateSpeed = 1;*/
     controls.maxDistance = 190;
     controls.enableZoom = true;
     controls.enablePan = false;
 
     //Create Sun
-    scene.add( new Sun('Sun').getInstance);
+    scene.add(new Sun('Sun').getInstance);
 
     //Sun's glowing
-    var spriteMaterial = new THREE.SpriteMaterial(
+    let spriteMaterial = new THREE.SpriteMaterial(
         {
             map: new THREE.ImageUtils.loadTexture('images/glow.png'), useScreenCoordinates: false,
             color: 0xFFFFE0, transparent: false, blending: THREE.AdditiveBlending
         });
-    var sprite = new THREE.Sprite(spriteMaterial);
+    let sprite = new THREE.Sprite(spriteMaterial);
     sprite.scale.set(30, 30, 0.4);
     scene.add(sprite);
 
@@ -198,7 +199,7 @@ function init() {
     });
 
     ship = new THREE.Mesh(shipGeometry, shipMaterials);
-    ship.position.set(0,20,0);
+    ship.position.set(60, 0, 0);
     scene.add(ship);
 
     //Space background is a large sphere
@@ -231,14 +232,14 @@ function init() {
     camera.lookAt(scene.position);
 
     //lights
-    var light = new THREE.AmbientLight(0x848484); // soft white light
+    let light = new THREE.AmbientLight(0x848484); // soft white light
     scene.add(light);
 
     window.addEventListener('resize', onWindowResize, false);
 }
 
 function move() {
-    var vector = direction.clone().multiplyScalar(speed, speed, speed);
+    let vector = direction.clone().multiplyScalar(speed, speed, speed);
     ship.position.x += vector.x;
     ship.position.y += vector.y;
     ship.position.z += vector.z;
@@ -248,16 +249,55 @@ function onWindowResize() {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
+function update() {
+    let delta = clock.getDelta(), // seconds.
+        moveDistance = 2 * delta, // 2 pixels per second
+        rotateAngle = Math.PI / 2 * delta;   // pi/2 radians (90 degrees) per second
+
+    if (keyboard.pressed("A"))
+        ship.rotation.z += rotateAngle;
+    if (keyboard.pressed("D"))
+        ship.rotation.z -= rotateAngle;
+
+    if (keyboard.pressed("left"))
+        ship.position.z += moveDistance;
+    if (keyboard.pressed("right"))
+        ship.position.z -= moveDistance;
+    if (keyboard.pressed("up"))
+        ship.position.x -= moveDistance;
+    if (keyboard.pressed("down"))
+        ship.position.x += moveDistance;
+
+    // collision detection:
+    //   determines if any of the rays from the ship origin to each vertex
+    //		intersects any face of a mesh in the array of target meshes
+    //   for increased collision accuracy, add more vertices to the ship;
+    //   HOWEVER: when the origin of the ray is within the target mesh, collisions do not occur
+    let originPoint = ship.position.clone();
+
+    for (let vertexIndex = 0; vertexIndex < ship.geometry.vertices.length; vertexIndex++) {
+        let localVertex = ship.geometry.vertices[vertexIndex].clone(),
+            globalVertex = localVertex.applyMatrix4(ship.matrix),
+            directionVector = globalVertex.sub(ship.position),
+            ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
+
+        let collisionResults = ray.intersectObjects(planets.map(function (planet) {
+            return planet.getInstance;
+        }));
+        if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length())
+            console.log(" Hit ");
+    }
+}
 function animate() {
     requestAnimationFrame(animate);
     controls.update();
-    render();
-}
-function render() {
-    move();
+    update();
     planets.forEach(function (planet) {
         planet.rotate(planet.rotateSpeed);
         planet.spin(planet.getSpinSpeed);
     });
+    render();
+}
+function render() {
     renderer.render(scene, camera);
 }
