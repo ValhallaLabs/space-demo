@@ -5,6 +5,8 @@ var direction = new THREE.Vector3(1, 0, 0),
     clock = new THREE.Clock(),
     keyboard = new THREEx.KeyboardState();
 
+var heartShape = new THREE.Shape();
+
 class Planet {
 
     constructor(name, rotateSpeed, distance, spinSpeed) {
@@ -236,6 +238,18 @@ function init() {
     scene.add(light);
 
     window.addEventListener('resize', onWindowResize, false);
+
+    heartShape.moveTo( 25, 25 );
+    heartShape.bezierCurveTo( 25, 25, 20, 0, 0, 0 );
+    heartShape.bezierCurveTo( 30, 0, 30, 35,30,35 );
+    heartShape.bezierCurveTo( 30, 55, 10, 77, 25, 95 );
+    heartShape.bezierCurveTo( 60, 77, 80, 55, 80, 35 );
+    heartShape.bezierCurveTo( 80, 35, 80, 0, 50, 0 );
+    heartShape.bezierCurveTo( 35, 0, 25, 25, 25, 25 );
+    moveAlong(ship, heartShape, {
+        speed: 3,
+        to: 100
+    });
 }
 
 function move() {
@@ -289,7 +303,7 @@ function update() {
     }
 }
 function animate() {
-    requestAnimationFrame(animate);
+    window.requestAnimationFrame(animate);
     controls.update();
     update();
     planets.forEach(function (planet) {
@@ -300,4 +314,62 @@ function animate() {
 }
 function render() {
     renderer.render(scene, camera);
+}
+
+function noop (){
+    console.log("default")
+}
+
+function moveAlong ( object, shape, options ) {
+    options = Object.assign({
+        from: 0,
+        to: 1,
+        duration: null,
+        speed: 50,
+        start: true,
+        yoyo: false,
+        onStart: null,
+        onComplete: noop,
+        onUpdate: noop,
+        smoothness: 100,
+        easing: TWEEN.Easing.Linear.None
+    }, options);
+
+    // array of vectors to determine shape
+    if (shape instanceof THREE.Shape) {
+
+    } else if ( shape.constructor === Array ) {
+        shape = new THREE.SplineCurve3(shape);
+    } else {
+        throw '2nd argument is not a Shape, nor an array of vertices';
+    }
+
+    options.duration = options.duration || shape.getLength();
+    options.length = options.duration * options.speed;
+
+    var tween = new TWEEN.Tween({ distance: options.from })
+        .to({ distance: options.to }, options.length)
+        .easing( options.easing )
+        .onStart( options.onStart )
+        .onComplete( options.onComplete )
+        .onUpdate(function(){
+            // get the position data half way along the path
+            var pathPosition = shape.getPointAt( this.distance );
+
+            // move to that position
+            object.position.set( pathPosition.x, pathPosition.y, pathPosition.z );
+
+            object.updateMatrix();
+
+            if ( options.onUpdate ) { options.onUpdate( this, shape ); }
+        })
+        .yoyo( options.yoyo );
+
+    if ( options.yoyo ) {
+        tween.repeat( Infinity );
+    }
+
+    if ( options.start ) { tween.start(); }
+
+    return tween;
 }
