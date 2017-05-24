@@ -1,11 +1,8 @@
-let camera, controls, scene, renderer, planets = [], ship, speed = 0.007;
+let camera, controls, scene, renderer, planets = [], ship, speed = -0.007, sun;
 
 // direction vector for movement
-var direction = new THREE.Vector3(1, 0, 0),
-    clock = new THREE.Clock(),
+let clock = new THREE.Clock(),
     keyboard = new THREEx.KeyboardState();
-
-var heartShape = new THREE.Shape();
 
 class Planet {
 
@@ -33,17 +30,17 @@ class Planet {
     }
 
     setTexture(src) {
-        this.texture = THREE.ImageUtils.loadTexture(src); // "images/planet-512.jpg"
+        this.texture = THREE.ImageUtils.loadTexture(src);
         return this;
     }
 
     setNormalMap(src) {
-        this.normalmap = THREE.ImageUtils.loadTexture(src); //"images/normal-map-512.jpg"
+        this.normalmap = THREE.ImageUtils.loadTexture(src);
         return this;
     }
 
     setSpecMap(src) {
-        this.specmap = THREE.ImageUtils.loadTexture(src); //"images/normal-map-512.jpg"
+        this.specmap = THREE.ImageUtils.loadTexture(src);
         return this;
     }
 
@@ -129,14 +126,18 @@ function init() {
 
     controls = new THREE.OrbitControls(camera, renderer.domElement);
     controls.minDistance = 20;
-    /*controls.autoRotate = true;
-     controls.autoRotateSpeed = 1;*/
+
+    // Camera auto-rotation
+    // controls.autoRotate = true;
+    // controls.autoRotateSpeed = 1;
+
     controls.maxDistance = 190;
     controls.enableZoom = true;
     controls.enablePan = false;
 
     //Create Sun
-    scene.add(new Sun('Sun').getInstance);
+    sun = new Sun('Sun');
+    scene.add(sun.getInstance);
 
     //Sun's glowing
     let spriteMaterial = new THREE.SpriteMaterial(
@@ -230,7 +231,7 @@ function init() {
     //position camera
     camera.position.x = 0;
     camera.position.y = 0;
-    camera.position.z = -15;
+    camera.position.z = -200;
     camera.lookAt(scene.position);
 
     //lights
@@ -238,35 +239,28 @@ function init() {
     scene.add(light);
 
     window.addEventListener('resize', onWindowResize, false);
-
-    heartShape.moveTo( 25, 25 );
-    heartShape.bezierCurveTo( 25, 25, 20, 0, 0, 0 );
-    heartShape.bezierCurveTo( 30, 0, 30, 35,30,35 );
-    heartShape.bezierCurveTo( 30, 55, 10, 77, 25, 95 );
-    heartShape.bezierCurveTo( 60, 77, 80, 55, 80, 35 );
-    heartShape.bezierCurveTo( 80, 35, 80, 0, 50, 0 );
-    heartShape.bezierCurveTo( 35, 0, 25, 25, 25, 25 );
-    moveAlong(ship, heartShape, {
-        speed: 3,
-        to: 100
-    });
 }
 
 function move() {
-    let vector = direction.clone().multiplyScalar(speed, speed, speed);
-    ship.position.x += vector.x;
-    ship.position.y += vector.y;
-    ship.position.z += vector.z;
-}
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-}
-function update() {
+    let direction = new THREE.Vector3(1, 0, 0);
     let delta = clock.getDelta(), // seconds.
-        moveDistance = 2 * delta, // 2 pixels per second
-        rotateAngle = Math.PI / 2 * delta;   // pi/2 radians (90 degrees) per second
+        moveDistance = 10 * delta, // 0.1 pixels per second
+        rotateAngle = Math.PI / 9 * delta,   // pi/2 radians (90 degrees) per second
+        vector = direction.clone().multiplyScalar(speed, speed, speed),
+        distanceToSun = ship.position.clone().distanceTo(sun.getInstance.position.clone());
+
+    console.log(ship.position.clone(), ship.position.clone().normalize());
+
+    if (distanceToSun < 3) {
+        console.log("YOU ARE DEAD");
+        return;
+    }
+
+    ship.position.x -= vector.x;
+    ship.position.y -= vector.y;
+    ship.position.z -= vector.z;
+
+    speed = sun.radius / distanceToSun / 10;
 
     if (keyboard.pressed("A"))
         ship.rotation.z += rotateAngle;
@@ -281,7 +275,13 @@ function update() {
         ship.position.x -= moveDistance;
     if (keyboard.pressed("down"))
         ship.position.x += moveDistance;
-
+}
+function onWindowResize() {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+}
+function update() {
     // collision detection:
     //   determines if any of the rays from the ship origin to each vertex
     //		intersects any face of a mesh in the array of target meshes
@@ -301,6 +301,7 @@ function update() {
         if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length())
             console.log(" Hit ");
     }
+    move();
 }
 function animate() {
     window.requestAnimationFrame(animate);
@@ -314,62 +315,4 @@ function animate() {
 }
 function render() {
     renderer.render(scene, camera);
-}
-
-function noop (){
-    console.log("default")
-}
-
-function moveAlong ( object, shape, options ) {
-    options = Object.assign({
-        from: 0,
-        to: 1,
-        duration: null,
-        speed: 50,
-        start: true,
-        yoyo: false,
-        onStart: null,
-        onComplete: noop,
-        onUpdate: noop,
-        smoothness: 100,
-        easing: TWEEN.Easing.Linear.None
-    }, options);
-
-    // array of vectors to determine shape
-    if (shape instanceof THREE.Shape) {
-
-    } else if ( shape.constructor === Array ) {
-        shape = new THREE.SplineCurve3(shape);
-    } else {
-        throw '2nd argument is not a Shape, nor an array of vertices';
-    }
-
-    options.duration = options.duration || shape.getLength();
-    options.length = options.duration * options.speed;
-
-    var tween = new TWEEN.Tween({ distance: options.from })
-        .to({ distance: options.to }, options.length)
-        .easing( options.easing )
-        .onStart( options.onStart )
-        .onComplete( options.onComplete )
-        .onUpdate(function(){
-            // get the position data half way along the path
-            var pathPosition = shape.getPointAt( this.distance );
-
-            // move to that position
-            object.position.set( pathPosition.x, pathPosition.y, pathPosition.z );
-
-            object.updateMatrix();
-
-            if ( options.onUpdate ) { options.onUpdate( this, shape ); }
-        })
-        .yoyo( options.yoyo );
-
-    if ( options.yoyo ) {
-        tween.repeat( Infinity );
-    }
-
-    if ( options.start ) { tween.start(); }
-
-    return tween;
 }
