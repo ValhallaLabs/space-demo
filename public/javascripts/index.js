@@ -1,3 +1,4 @@
+"use strict";
 let camera, controls, scene, renderer, planets = [], ship, speed = -0.007, sun;
 
 // direction vector for movement
@@ -192,8 +193,8 @@ function init() {
     planets.push(sixth);
 
     //add Planets to scene
-    planets.forEach(function (planet) {
-        scene.add(planet.getInstance);
+    planets.forEach((planet) => {
+        scene.add(planet.getInstance)
     });
 
     let shipGeometry = new THREE.CylinderGeometry(0, 0.3, 0.9, 3, 1);
@@ -249,8 +250,6 @@ function move() {
         vector = direction.clone().multiplyScalar(speed, speed, speed),
         distanceToSun = ship.position.clone().distanceTo(sun.getInstance.position.clone());
 
-    console.log(ship.position.clone(), ship.position.clone().normalize());
-
     if (distanceToSun < 3) {
         console.log("YOU ARE DEAD");
         return;
@@ -295,11 +294,10 @@ function update() {
             directionVector = globalVertex.sub(ship.position),
             ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
 
-        let collisionResults = ray.intersectObjects(planets.map(function (planet) {
-            return planet.getInstance;
-        }));
-        if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length())
-            console.log(" Hit ");
+        let collisionResults = ray.intersectObjects(planets.map((planet) => planet.getInstance));
+        if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
+            console.log("YOU ARE DEAD");
+        }
     }
     move();
 }
@@ -307,7 +305,7 @@ function animate() {
     window.requestAnimationFrame(animate);
     controls.update();
     update();
-    planets.forEach(function (planet) {
+    planets.forEach((planet) => {
         planet.rotate(planet.rotateSpeed);
         planet.spin(planet.getSpinSpeed);
     });
