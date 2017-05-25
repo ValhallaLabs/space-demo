@@ -1,9 +1,23 @@
 "use strict";
-let camera, controls, scene, renderer, planets = [], ship, speed = -0.007, sun;
+// Global variables
+let camera, controls, scene, renderer, ship, sun,
+    planets = [],
+    speed = -0.007,
+    isPaused = false;
 
-// direction vector for movement
+// Required utils
 let clock = new THREE.Clock(),
     keyboard = new THREEx.KeyboardState();
+
+// Define animation loop method
+window.requestFrame = (function () {
+    return window.requestAnimationFrame
+        || window.webkitRequestAnimationFrame
+        || window.mozRequestAnimationFrame
+        || function (callback) {
+            window.setTimeout(callback, 1000 / 60);
+        };
+})();
 
 class Planet {
 
@@ -275,11 +289,13 @@ function move() {
     if (keyboard.pressed("down"))
         ship.position.x += moveDistance;
 }
+
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 }
+
 function update() {
     // collision detection:
     //   determines if any of the rays from the ship origin to each vertex
@@ -301,16 +317,36 @@ function update() {
     }
     move();
 }
-function animate() {
-    window.requestAnimationFrame(animate);
-    controls.update();
-    update();
-    planets.forEach((planet) => {
-        planet.rotate(planet.rotateSpeed);
-        planet.spin(planet.getSpinSpeed);
-    });
-    render();
-}
+
 function render() {
     renderer.render(scene, camera);
 }
+
+function animate() {
+    controls.update();
+
+    if (isPaused) {
+        render();
+        stop();
+    } else {
+        update();
+        planets.forEach((planet) => {
+            planet.rotate(planet.rotateSpeed);
+            planet.spin(planet.getSpinSpeed);
+        });
+        render();
+        requestFrame(animate);
+    }
+}
+
+function stop() {
+    setTimeout(() => {
+        animate();
+    }, 1000 / 60)
+}
+
+window.onkeydown = function (event) {
+    if (event.keyCode == 80) {
+        isPaused = !isPaused; // flips the pause state on 'P' pressed
+    }
+};
