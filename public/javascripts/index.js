@@ -135,7 +135,7 @@ function init() {
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
 
-    document.body.appendChild(renderer.domElement);
+    document.getElementById('container').appendChild(renderer.domElement);
 
     camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
 
@@ -265,7 +265,7 @@ function move() {
         distanceToSun = ship.position.clone().distanceTo(sun.getInstance.position.clone());
 
     if (distanceToSun < 3) {
-        console.log("YOU ARE DEAD");
+        showDeadScreen();
         return;
     }
 
@@ -312,7 +312,7 @@ function update() {
 
         let collisionResults = ray.intersectObjects(planets.map((planet) => planet.getInstance));
         if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-            console.log("YOU ARE DEAD");
+            console.log("dead");
         }
     }
     move();
@@ -345,8 +345,18 @@ function stop() {
     }, 1000 / 60)
 }
 
+function showDeadScreen() {
+    let classList = document.getElementsByClassName('background')[0].classList;
+    if (classList.contains('disabled'))
+        classList.remove('disabled');
+}
+
 window.onkeydown = function (event) {
     if (event.keyCode == 80) {
         isPaused = !isPaused; // flips the pause state on 'P' pressed
     }
+};
+
+document.getElementById('reset').onclick = function () {
+    window.location.reload();
 };

@@ -4,7 +4,56 @@ html, body {
     overflow: hidden;
 }
 
+#container {
+    position: relative;
+}
+
 canvas {
     width: 100%;
     height: 100%;
+}
+
+.background {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 10;
+    background-color: rgba(0, 0, 0, 0.1);
+}
+
+#message {
+    padding: 100px;
+    margin-top: 10%;
+    border-top: 1px solid white;
+    border-bottom: 1px solid white;
+    color: whitesmoke;
+    font-size: 75px;
+    font-weight: bolder;
+    text-align: center;
+    font-family: OptimusPrinceps, serif;
+}
+
+#reset {
+    background-color: azure;
+    height: 40px;
+    width: 200px;
+    font-size: x-large;
+    font-weight: bolder;
+    border-radius: 5px;
+    font-family: OptimusPrinceps, serif;
+}
+
+#reset:hover {
+    cursor: pointer;
+    background-color: beige;
+    color: darkgrey;
+}
+
+@font-face {
+    font-family: OptimusPrinceps;
+    src: url("../stylesheets/fonts/OptimusPrinceps.ttf");
+}
+
+.disabled {
+    display: none;
 }
