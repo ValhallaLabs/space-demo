@@ -351,12 +351,31 @@ function showDeadScreen() {
         classList.remove('disabled');
 }
 
-window.onkeydown = function (event) {
-    if (event.keyCode == 80) {
-        isPaused = !isPaused; // flips the pause state on 'P' pressed
-    }
-};
+(function () {
+    const pause = {
+        off: document.getElementById("resume"),
+        on: document.getElementById("pause")
+    };
 
-document.getElementById('reset').onclick = function () {
-    window.location.reload();
-};
+    function togglePause(p) {
+        pause['on'].style.display = p ? "none" : 'block';
+        pause['off'].style.display = p ? "block" : 'none';
+    }
+
+    window.onkeydown = function (event) {
+        if (event.keyCode == 80)
+            togglePause(isPaused = !isPaused);  // flips the pause state on 'P' pressed
+    };
+
+    pause.on.onclick = function () {
+        togglePause(isPaused = true);
+    };
+
+    pause.off.onclick = function () {
+        togglePause(isPaused = false);
+    };
+
+    document.getElementById('reset').onclick = function () {
+        window.location.reload();
+    };
+})();
