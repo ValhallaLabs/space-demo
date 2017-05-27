@@ -2,7 +2,7 @@
 // Global variables
 let camera, controls, scene, renderer, ship, sun,
     planets = [],
-    speed = -0.007,
+    gravity = -0.007,
     isPaused = false;
 
 // Required utils
@@ -257,23 +257,48 @@ function init() {
 }
 
 function move() {
-    let direction = new THREE.Vector3(1, 0, 0);
     let delta = clock.getDelta(), // seconds.
         moveDistance = 10 * delta, // 0.1 pixels per second
-        rotateAngle = Math.PI / 9 * delta,   // pi/2 radians (90 degrees) per second
-        vector = direction.clone().multiplyScalar(speed, speed, speed),
-        distanceToSun = ship.position.clone().distanceTo(sun.getInstance.position.clone());
+        rotateAngle = Math.PI / 9 * delta,   // pi/9 radians (20 degrees) per second
+        shipPosition = ship.position.clone(),
+        distanceToSun = shipPosition.distanceTo(sun.getInstance.position.clone()),
+        array = [];
 
     if (distanceToSun < 3) {
         showDeadScreen();
         return;
     }
 
+    array = planets.map((planet) => {
+        return {
+            p: planet,
+            angle: shipPosition.angleTo(planet.getInstance.position.clone()),
+            distance: shipPosition.distanceTo(planet.getInstance.position.clone())
+        };
+    });
+
+/*    array.push({
+        p: sun,
+        angle: shipPosition.angleTo(sun.getInstance.position.clone()),
+        distance: shipPosition.distanceTo(sun.getInstance.position.clone())
+    });*/
+
+    let planet = array.find((planet) => {
+        return planet.distance == Math.min.apply(null, array.map((planet) => planet.distance));
+    });
+    console.debug("Planets :", array,", the closest planet: ", planet);
+
+    let vector = new THREE.Vector3(1, 0, 1).clone().multiplyScalar(gravity, gravity, gravity);
+
+    vector.applyAxisAngle(planet.p.getInstance.position.clone().normalize(), planet.angle);
+
+    console.debug("After", vector);
+
     ship.position.x -= vector.x;
     ship.position.y -= vector.y;
     ship.position.z -= vector.z;
 
-    speed = sun.radius / distanceToSun / 10;
+    gravity = planet.p.radius / planet.distance / 10;
 
     if (keyboard.pressed("A"))
         ship.rotation.z += rotateAngle;
@@ -288,6 +313,8 @@ function move() {
         ship.position.x -= moveDistance;
     if (keyboard.pressed("down"))
         ship.position.x += moveDistance;
+
+    array = [];
 }
 
 function onWindowResize() {
@@ -297,13 +324,19 @@ function onWindowResize() {
 }
 
 function update() {
+    let originPoint = ship.position.clone();
+
+    // Update planets positions
+    planets.forEach((planet) => {
+        planet.rotate(planet.rotateSpeed);
+        planet.spin(planet.getSpinSpeed);
+    });
+
     // collision detection:
     //   determines if any of the rays from the ship origin to each vertex
     //		intersects any face of a mesh in the array of target meshes
     //   for increased collision accuracy, add more vertices to the ship;
     //   HOWEVER: when the origin of the ray is within the target mesh, collisions do not occur
-    let originPoint = ship.position.clone();
-
     for (let vertexIndex = 0; vertexIndex < ship.geometry.vertices.length; vertexIndex++) {
         let localVertex = ship.geometry.vertices[vertexIndex].clone(),
             globalVertex = localVertex.applyMatrix4(ship.matrix),
@@ -330,19 +363,13 @@ function animate() {
         stop();
     } else {
         update();
-        planets.forEach((planet) => {
-            planet.rotate(planet.rotateSpeed);
-            planet.spin(planet.getSpinSpeed);
-        });
         render();
         requestFrame(animate);
     }
 }
 
 function stop() {
-    setTimeout(() => {
-        animate();
-    }, 1000 / 60)
+    setTimeout(() => animate(), 1000 / 60);
 }
 
 function showDeadScreen() {
