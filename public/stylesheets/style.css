@@ -57,3 +57,39 @@ canvas {
 .disabled {
     display: none;
 }
+
+#hud {
+    position: absolute;
+    z-index: 9;
+    padding: 30px;
+}
+
+#fuel {
+    position: fixed;
+    top: 10px;
+    right: 30px;
+    background-color: rgba(0, 128, 7, 0.49);
+    width: 40px;
+    height: 200px;
+}
+
+#fuel:before {
+    content: 'Fuel';
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: bolder;
+}
+
+#pause, #resume {
+    height: 55px;
+    width: 50px;
+    fill: rgba(0, 128, 7, 0.3);
+}
+
+#pause:hover, #resume:hover {
+    fill: rgba(0, 128, 7, 0.8);
+    cursor: pointer;
+}
+
+#resume {
+    display: none;
+}
