@@ -1,27 +1,5 @@
 "use strict";
-// Global variables
-let camera, controls, scene, renderer, ship, sun, arrow,
-    planets = [],
-    gravity = -0.007,
-    fuel = 1000,
-    gameOver = false,
-    isPaused = false,
-    fuelIndicator = document.getElementById("fuel");
-
-// Required utils
-let clock = new THREE.Clock(),
-    keyboard = new THREEx.KeyboardState();
-
-// Define animation loop method
-window.requestFrame = (function () {
-    return window.requestAnimationFrame
-        || window.webkitRequestAnimationFrame
-        || window.mozRequestAnimationFrame
-        || function (callback) {
-            window.setTimeout(callback, 1000 / 60);
-        };
-})();
-
+// Classes
 class Planet {
 
     constructor(name, rotateSpeed, distance, spinSpeed) {
@@ -117,6 +95,7 @@ class Planet {
 }
 
 class Sun extends Planet {
+
     constructor(name) {
         super(name);
         this.setTexture('images/planets/sunmap.jpg')
@@ -126,9 +105,9 @@ class Sun extends Planet {
         this.move(0, 0, 0);
     }
 
-    setMaterial(){
+    setMaterial() {
         // base image texture for mesh
-        let lavaTexture = new THREE.ImageUtils.loadTexture( 'images/lava.jpg');
+        let lavaTexture = new THREE.ImageUtils.loadTexture('images/lava.jpg');
         lavaTexture.wrapS = lavaTexture.wrapT = THREE.RepeatWrapping;
         // multiplier for distortion speed
         let baseSpeed = 0.0002;
@@ -137,13 +116,13 @@ class Sun extends Planet {
             repeatT = repeatS;
 
         // texture used to generate "randomness", distort all other textures
-        let noiseTexture = new THREE.ImageUtils.loadTexture( 'images/cloud.png' );
+        let noiseTexture = new THREE.ImageUtils.loadTexture('images/cloud.png');
         noiseTexture.wrapS = noiseTexture.wrapT = THREE.RepeatWrapping;
         // magnitude of noise effect
         let noiseScale = 0.04;
 
         // texture to additively blend with base image texture
-        let blendTexture = new THREE.ImageUtils.loadTexture( 'images/lava.jpg' );
+        let blendTexture = new THREE.ImageUtils.loadTexture('images/lava.jpg');
         blendTexture.wrapS = blendTexture.wrapT = THREE.RepeatWrapping;
         // multiplier for distortion speed
         let blendSpeed = 0.01;
@@ -160,37 +139,88 @@ class Sun extends Planet {
 
         // use 'window' to create global object
         window.customUniforms = {
-            baseTexture:    { type: "t", value: lavaTexture },
-            baseSpeed:      { type: "f", value: baseSpeed },
-            repeatS:        { type: "f", value: repeatS },
-            repeatT:		{ type: "f", value: repeatT },
-            noiseTexture:	{ type: "t", value: noiseTexture },
-            noiseScale:		{ type: "f", value: noiseScale },
-            blendTexture:	{ type: "t", value: blendTexture },
-            blendSpeed: 	{ type: "f", value: blendSpeed },
-            blendOffset: 	{ type: "f", value: blendOffset },
-            bumpTexture:	{ type: "t", value: bumpTexture },
-            bumpSpeed: 		{ type: "f", value: bumpSpeed },
-            bumpScale: 		{ type: "f", value: bumpScale },
-            alpha: 			{ type: "f", value: 1.0 },
-            time: 			{ type: "f", value: 1.0 }
+            baseTexture: {type: "t", value: lavaTexture},
+            baseSpeed: {type: "f", value: baseSpeed},
+            repeatS: {type: "f", value: repeatS},
+            repeatT: {type: "f", value: repeatT},
+            noiseTexture: {type: "t", value: noiseTexture},
+            noiseScale: {type: "f", value: noiseScale},
+            blendTexture: {type: "t", value: blendTexture},
+            blendSpeed: {type: "f", value: blendSpeed},
+            blendOffset: {type: "f", value: blendOffset},
+            bumpTexture: {type: "t", value: bumpTexture},
+            bumpSpeed: {type: "f", value: bumpSpeed},
+            bumpScale: {type: "f", value: bumpScale},
+            alpha: {type: "f", value: 1.0},
+            time: {type: "f", value: 1.0}
         };
 
         // create custom material from the shader
         this.planetMaterial = new THREE.ShaderMaterial({
-                uniforms: window.customUniforms,
-                vertexShader: document.getElementById('vertexShader').textContent,
-                fragmentShader: document.getElementById('fragmentShader').textContent
-            });
+            uniforms: window.customUniforms,
+            vertexShader: document.getElementById('vertexShader').textContent,
+            fragmentShader: document.getElementById('fragmentShader').textContent
+        });
         return this;
     }
 
-    create(){
+    create() {
         this.planet = new THREE.Mesh(this.planetGeometry, this.planetMaterial);
         return this;
     }
 
 }
+
+class Utils {
+
+    static stop() {
+        setTimeout(() => animate(), 1000 / 60);
+    }
+
+    static showDeadScreen() {
+        let classList = document.getElementsByClassName('background')[0].classList;
+        if (classList.contains('disabled'))
+            classList.remove('disabled');
+        gameOver = true;
+    }
+
+    static updateFuelIndicator(fuel) {
+        fuelIndicator.style.height = fuel * 200 / 1000 + 'px';
+        if (fuel <= 0) {
+            fuelIndicator.classList.add('red');
+        }
+    }
+
+    static onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+}
+
+// Global variables
+let camera, controls, scene, renderer, ship, sun, arrow,
+    planets = [],
+    gravity = -0.007,
+    fuel = 1000,
+    gameOver = false,
+    isPaused = false,
+    fuelIndicator = document.getElementById("fuel"),
+    THREE = window.THREE;
+
+// Required utils
+let clock = new THREE.Clock(),
+    keyboard = new THREEx.KeyboardState();
+
+// Define animation loop method
+window.requestFrame = (() => {
+    return window.requestAnimationFrame
+        || window.webkitRequestAnimationFrame
+        || window.mozRequestAnimationFrame
+        || function (callback) {
+            window.setTimeout(callback, 1000 / 60);
+        };
+})();
 
 init();
 animate();
@@ -322,7 +352,7 @@ function init() {
     let light = new THREE.AmbientLight(0x848484); // soft white light
     scene.add(light);
 
-    window.addEventListener('resize', onWindowResize, false);
+    window.addEventListener('resize', Utils.onWindowResize, false);
 }
 
 function move() {
@@ -335,84 +365,111 @@ function move() {
     if (gameOver)
         return;
 
-    array = planets.map((planet) => {
+    // Create array with all planets and Sun distance info
+    Array.prototype.push.call(array = planets.map((planet) => {
+        let distance = shipPosition.distanceTo(planet.getInstance.position.clone());
         return {
             p: planet,
-            distance: shipPosition.distanceTo(planet.getInstance.position.clone())
+            distance: distance,
+            vector: new THREE.Vector3().subVectors(planet.getInstance.position.clone(), shipPosition),
+            force: planet.radius / distance / 5
         };
-    });
-
-    array.push({
+    }), {
         p: sun,
-        distance: shipPosition.distanceTo(sun.getInstance.position.clone())
+        distance: shipPosition.distanceTo(sun.getInstance.position.clone()),
+        vector: new THREE.Vector3().subVectors(sun.getInstance.position.clone(), shipPosition),
+        force: sun.radius / shipPosition.distanceTo(sun.getInstance.position.clone()) / 5
     });
 
-    let planet = array.find((planet) => {
+    // Get the closest Object
+    let closestObject = array.find((planet) => {
         return planet.distance == Math.min.apply(null, array.map((planet) => planet.distance));
     });
 
-    if(planet.distance < 3){
-        showDeadScreen();
+    // Detect collision
+    if (closestObject.distance <= closestObject.p.radius) {
+        Utils.showDeadScreen();
         scene.remove(scene.getObjectByName('Ship'));
     }
 
-    let direction = new THREE.Vector3().subVectors(
-        planet.p.getInstance.position.clone(),
-        shipPosition
-    ).normalize();
+    // Delete closest Object from array
+    array = array.filter((i) => i != closestObject);
 
-    arrow = new THREE.ArrowHelper(direction, shipPosition, planet.distance, 0x884400);
-    arrow.name = "arrow";
+    // Create array of vectors and build them
+    let vectors = array.map((planet, i) => {
+        arrow = new THREE.ArrowHelper(planet.vector.normalize(), shipPosition, 10, 0x9FC5E8);
+        arrow.name = "arrow" + i;
+        scene.add(arrow);
+        return planet.vector;
+    });
+
+    // Closest planet vector
+    arrow = new THREE.ArrowHelper(closestObject.vector.normalize(), shipPosition, 10, 0xFF0000);
+    arrow.name = "arrow6";
     scene.add(arrow);
 
-    gravity = planet.p.radius / planet.distance / 2;
+    // Find main vector
+    let resultVector = vectors.reduce((first, second) => {
+        return new THREE.Vector3().addVectors(first, second).normalize();
+    });
 
+    let global = 0;
+    array.forEach((planet) => {
+        global += planet.force
+    });
+
+    // Direction of ship's movement
+    let direction = shipPosition.addVectors(resultVector, closestObject.vector).normalize();
+
+    // Gravity calculation (primitive)
+    gravity = closestObject.force + global / 6;
+
+    // Result point for movement
     let vector = direction.clone().multiplyScalar(gravity, gravity, gravity);
 
-    if( fuel > 0) {
-        if (keyboard.pressed("A")){
+    // Player actions
+    if (fuel > 0) {
+        if (keyboard.pressed("A")) {
             ship.rotation.z += rotateAngle;
             fuel -= 1;
         }
-        if (keyboard.pressed("D")){
+        if (keyboard.pressed("D")) {
             ship.rotation.z -= rotateAngle;
             fuel -= 1;
         }
-        if (keyboard.pressed("left")){
+        if (keyboard.pressed("left")) {
             vector.z -= moveDistance;
             fuel -= 3;
         }
-        if (keyboard.pressed("right")){
+        if (keyboard.pressed("right")) {
             vector.z += moveDistance;
             fuel -= 3;
         }
-        if (keyboard.pressed("up")){
+        if (keyboard.pressed("up")) {
             vector.x += moveDistance;
             fuel -= 3;
         }
-        if (keyboard.pressed("down")){
+        if (keyboard.pressed("down")) {
             vector.x -= moveDistance;
             fuel -= 3;
         }
-        updateFuelIndicator(fuel);
+        Utils.updateFuelIndicator(fuel);
     }
 
+    // Apply all calculated things to ship position
     ship.position.x += vector.x ? vector.x : -vector.x;
     ship.position.y += vector.y;
     ship.position.z += vector.z ? vector.z : -vector.z;
 
+    // Erse array and delete old vectors from scene
     array = [];
+    for (let i = 0; i < 7; i++) {
+        setTimeout(() => {
+            scene.remove(scene.getObjectByName("arrow" + i))
+        }, 10)
+    }
     window.customUniforms.time.value += delta;
 
-    setTimeout(function () {
-        scene.remove(scene.getObjectByName('arrow'))
-    }, 1000 / 60)
-}
-
-function onWindowResize() {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 function update() {
@@ -424,7 +481,7 @@ function update() {
 
     // Rotate sun
     sun.rotate(0.01);
-
+    // Apply movement changes
     move();
 }
 
@@ -438,7 +495,7 @@ function animate() {
 
     if (isPaused) {
         render();
-        stop();
+        Utils.stop();
     } else {
         update();
         render();
@@ -446,25 +503,8 @@ function animate() {
     }
 }
 
-function stop() {
-    setTimeout(() => animate(), 1000 / 60);
-}
-
-function showDeadScreen() {
-    let classList = document.getElementsByClassName('background')[0].classList;
-    if (classList.contains('disabled'))
-        classList.remove('disabled');
-    gameOver = true;
-}
-
-function updateFuelIndicator(fuel) {
-    fuelIndicator.style.height = fuel * 200 / 1000 + 'px';
-    if(fuel <= 0){
-        fuelIndicator.classList.add('red');
-    }
-}
-
-(function () {
+// Listeners for HUD and menu actions
+(() => {
     const pause = {
         off: document.getElementById("resume"),
         on: document.getElementById("pause")
