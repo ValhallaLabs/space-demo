@@ -122,6 +122,71 @@ class Sun extends Planet {
             .create();
         this.move(0, 0, 0);
     }
+
+    setMaterial(){
+        // base image texture for mesh
+        let lavaTexture = new THREE.ImageUtils.loadTexture( 'images/lava.jpg');
+        lavaTexture.wrapS = lavaTexture.wrapT = THREE.RepeatWrapping;
+        // multiplier for distortion speed
+        let baseSpeed = 0.0002;
+        // number of times to repeat texture in each direction
+        let repeatS = 2.0,
+            repeatT = repeatS;
+
+        // texture used to generate "randomness", distort all other textures
+        let noiseTexture = new THREE.ImageUtils.loadTexture( 'images/cloud.png' );
+        noiseTexture.wrapS = noiseTexture.wrapT = THREE.RepeatWrapping;
+        // magnitude of noise effect
+        let noiseScale = 0.04;
+
+        // texture to additively blend with base image texture
+        let blendTexture = new THREE.ImageUtils.loadTexture( 'images/lava.jpg' );
+        blendTexture.wrapS = blendTexture.wrapT = THREE.RepeatWrapping;
+        // multiplier for distortion speed
+        let blendSpeed = 0.01;
+        // adjust lightness/darkness of blended texture
+        let blendOffset = 0.25;
+
+        // texture to determine normal displacement
+        let bumpTexture = noiseTexture;
+        bumpTexture.wrapS = bumpTexture.wrapT = THREE.RepeatWrapping;
+        // multiplier for distortion speed
+        let bumpSpeed = 0.15;
+        // magnitude of normal displacement
+        let bumpScale = 10.0;
+
+        // use 'window' to create global object
+        window.customUniforms = {
+            baseTexture:    { type: "t", value: lavaTexture },
+            baseSpeed:      { type: "f", value: baseSpeed },
+            repeatS:        { type: "f", value: repeatS },
+            repeatT:		{ type: "f", value: repeatT },
+            noiseTexture:	{ type: "t", value: noiseTexture },
+            noiseScale:		{ type: "f", value: noiseScale },
+            blendTexture:	{ type: "t", value: blendTexture },
+            blendSpeed: 	{ type: "f", value: blendSpeed },
+            blendOffset: 	{ type: "f", value: blendOffset },
+            bumpTexture:	{ type: "t", value: bumpTexture },
+            bumpSpeed: 		{ type: "f", value: bumpSpeed },
+            bumpScale: 		{ type: "f", value: bumpScale },
+            alpha: 			{ type: "f", value: 1.0 },
+            time: 			{ type: "f", value: 1.0 }
+        };
+
+        // create custom material from the shader
+        this.planetMaterial = new THREE.ShaderMaterial({
+                uniforms: window.customUniforms,
+                vertexShader: document.getElementById('vertexShader').textContent,
+                fragmentShader: document.getElementById('fragmentShader').textContent
+            });
+        return this;
+    }
+
+    create(){
+        this.planet = new THREE.Mesh(this.planetGeometry, this.planetMaterial);
+        return this;
+    }
+
 }
 
 init();
@@ -288,7 +353,7 @@ function move() {
     });
     console.debug("Planets :", array,", the closest planet: ", planet);
 
-    let vector = new THREE.Vector3(1, 0, 1).clone().multiplyScalar(gravity, gravity, gravity);
+    let vector = new THREE.Vector3(1, 0, 0).clone().multiplyScalar(gravity, gravity, gravity);
 
     vector.applyAxisAngle(planet.p.getInstance.position.clone().normalize(), planet.angle);
 
@@ -324,7 +389,8 @@ function onWindowResize() {
 }
 
 function update() {
-    let originPoint = ship.position.clone();
+    let originPoint = ship.position.clone(),
+        delta = clock.getDelta();
 
     // Update planets positions
     planets.forEach((planet) => {
@@ -332,6 +398,7 @@ function update() {
         planet.spin(planet.getSpinSpeed);
     });
 
+    window.customUniforms.time.value += delta;
     // collision detection:
     //   determines if any of the rays from the ship origin to each vertex
     //		intersects any face of a mesh in the array of target meshes
