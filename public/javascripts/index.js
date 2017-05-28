@@ -1,9 +1,12 @@
 "use strict";
 // Global variables
-let camera, controls, scene, renderer, ship, sun,
+let camera, controls, scene, renderer, ship, sun, arrow,
     planets = [],
     gravity = -0.007,
-    isPaused = false;
+    fuel = 1000,
+    gameOver = false,
+    isPaused = false,
+    fuelIndicator = document.getElementById("fuel");
 
 // Required utils
 let clock = new THREE.Clock(),
@@ -282,7 +285,8 @@ function init() {
     });
 
     ship = new THREE.Mesh(shipGeometry, shipMaterials);
-    ship.position.set(60, 0, 0);
+    ship.position.set(-100, 0, 0);
+    ship.name = "Ship";
     scene.add(ship);
 
     //Space background is a large sphere
@@ -326,60 +330,83 @@ function move() {
         moveDistance = 10 * delta, // 0.1 pixels per second
         rotateAngle = Math.PI / 9 * delta,   // pi/9 radians (20 degrees) per second
         shipPosition = ship.position.clone(),
-        distanceToSun = shipPosition.distanceTo(sun.getInstance.position.clone()),
         array = [];
 
-    if (distanceToSun < 3) {
-        showDeadScreen();
+    if (gameOver)
         return;
-    }
 
     array = planets.map((planet) => {
         return {
             p: planet,
-            angle: shipPosition.angleTo(planet.getInstance.position.clone()),
             distance: shipPosition.distanceTo(planet.getInstance.position.clone())
         };
     });
 
-/*    array.push({
+    array.push({
         p: sun,
-        angle: shipPosition.angleTo(sun.getInstance.position.clone()),
         distance: shipPosition.distanceTo(sun.getInstance.position.clone())
-    });*/
+    });
 
     let planet = array.find((planet) => {
         return planet.distance == Math.min.apply(null, array.map((planet) => planet.distance));
     });
-    console.debug("Planets :", array,", the closest planet: ", planet);
 
-    let vector = new THREE.Vector3(1, 0, 0).clone().multiplyScalar(gravity, gravity, gravity);
+    if(planet.distance < 3){
+        showDeadScreen();
+        scene.remove(scene.getObjectByName('Ship'));
+    }
 
-    vector.applyAxisAngle(planet.p.getInstance.position.clone().normalize(), planet.angle);
+    let direction = new THREE.Vector3().subVectors(
+        planet.p.getInstance.position.clone(),
+        shipPosition
+    ).normalize();
 
-    console.debug("After", vector);
+    arrow = new THREE.ArrowHelper(direction, shipPosition, planet.distance, 0x884400);
+    arrow.name = "arrow";
+    scene.add(arrow);
 
-    ship.position.x -= vector.x;
-    ship.position.y -= vector.y;
-    ship.position.z -= vector.z;
+    gravity = planet.p.radius / planet.distance / 2;
 
-    gravity = planet.p.radius / planet.distance / 10;
+    let vector = direction.clone().multiplyScalar(gravity, gravity, gravity);
 
-    if (keyboard.pressed("A"))
-        ship.rotation.z += rotateAngle;
-    if (keyboard.pressed("D"))
-        ship.rotation.z -= rotateAngle;
+    if( fuel > 0) {
+        if (keyboard.pressed("A")){
+            ship.rotation.z += rotateAngle;
+            fuel -= 1;
+        }
+        if (keyboard.pressed("D")){
+            ship.rotation.z -= rotateAngle;
+            fuel -= 1;
+        }
+        if (keyboard.pressed("left")){
+            vector.z -= moveDistance;
+            fuel -= 3;
+        }
+        if (keyboard.pressed("right")){
+            vector.z += moveDistance;
+            fuel -= 3;
+        }
+        if (keyboard.pressed("up")){
+            vector.x += moveDistance;
+            fuel -= 3;
+        }
+        if (keyboard.pressed("down")){
+            vector.x -= moveDistance;
+            fuel -= 3;
+        }
+        updateFuelIndicator(fuel);
+    }
 
-    if (keyboard.pressed("left"))
-        ship.position.z += moveDistance;
-    if (keyboard.pressed("right"))
-        ship.position.z -= moveDistance;
-    if (keyboard.pressed("up"))
-        ship.position.x -= moveDistance;
-    if (keyboard.pressed("down"))
-        ship.position.x += moveDistance;
+    ship.position.x += vector.x ? vector.x : -vector.x;
+    ship.position.y += vector.y;
+    ship.position.z += vector.z ? vector.z : -vector.z;
 
     array = [];
+    window.customUniforms.time.value += delta;
+
+    setTimeout(function () {
+        scene.remove(scene.getObjectByName('arrow'))
+    }, 1000 / 60)
 }
 
 function onWindowResize() {
@@ -389,32 +416,15 @@ function onWindowResize() {
 }
 
 function update() {
-    let originPoint = ship.position.clone(),
-        delta = clock.getDelta();
-
     // Update planets positions
     planets.forEach((planet) => {
         planet.rotate(planet.rotateSpeed);
         planet.spin(planet.getSpinSpeed);
     });
 
-    window.customUniforms.time.value += delta;
-    // collision detection:
-    //   determines if any of the rays from the ship origin to each vertex
-    //		intersects any face of a mesh in the array of target meshes
-    //   for increased collision accuracy, add more vertices to the ship;
-    //   HOWEVER: when the origin of the ray is within the target mesh, collisions do not occur
-    for (let vertexIndex = 0; vertexIndex < ship.geometry.vertices.length; vertexIndex++) {
-        let localVertex = ship.geometry.vertices[vertexIndex].clone(),
-            globalVertex = localVertex.applyMatrix4(ship.matrix),
-            directionVector = globalVertex.sub(ship.position),
-            ray = new THREE.Raycaster(originPoint, directionVector.clone().normalize());
+    // Rotate sun
+    sun.rotate(0.01);
 
-        let collisionResults = ray.intersectObjects(planets.map((planet) => planet.getInstance));
-        if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length()) {
-            console.log("dead");
-        }
-    }
     move();
 }
 
@@ -422,6 +432,7 @@ function render() {
     renderer.render(scene, camera);
 }
 
+// Main game loop
 function animate() {
     controls.update();
 
@@ -443,6 +454,14 @@ function showDeadScreen() {
     let classList = document.getElementsByClassName('background')[0].classList;
     if (classList.contains('disabled'))
         classList.remove('disabled');
+    gameOver = true;
+}
+
+function updateFuelIndicator(fuel) {
+    fuelIndicator.style.height = fuel * 200 / 1000 + 'px';
+    if(fuel <= 0){
+        fuelIndicator.classList.add('red');
+    }
 }
 
 (function () {
