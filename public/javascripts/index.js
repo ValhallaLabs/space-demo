@@ -208,6 +208,10 @@ let camera, controls, scene, renderer, ship, sun, arrow,
     fuelIndicator = document.getElementById("fuel"),
     THREE = window.THREE;
 
+const FUEL_MOVEMENT_COST = 0.5,
+    FUEL_ROTATE_COST = 0.1,
+    SHIP_MOVE_SPEED = 2;
+
 // Required utils
 let clock = new THREE.Clock(),
     keyboard = new THREEx.KeyboardState();
@@ -357,7 +361,7 @@ function init() {
 
 function move() {
     let delta = clock.getDelta(), // seconds.
-        moveDistance = 10 * delta, // 0.1 pixels per second
+        moveDistance = SHIP_MOVE_SPEED * delta, // 0.1 pixels per second
         rotateAngle = Math.PI / 9 * delta,   // pi/9 radians (20 degrees) per second
         shipPosition = ship.position.clone(),
         array = [];
@@ -431,27 +435,27 @@ function move() {
     if (fuel > 0) {
         if (keyboard.pressed("A")) {
             ship.rotation.z += rotateAngle;
-            fuel -= 1;
+            fuel -= FUEL_ROTATE_COST;
         }
         if (keyboard.pressed("D")) {
             ship.rotation.z -= rotateAngle;
-            fuel -= 1;
+            fuel -= FUEL_ROTATE_COST;
         }
         if (keyboard.pressed("left")) {
             vector.z -= moveDistance;
-            fuel -= 3;
+            fuel -= FUEL_MOVEMENT_COST;
         }
         if (keyboard.pressed("right")) {
             vector.z += moveDistance;
-            fuel -= 3;
+            fuel -= FUEL_MOVEMENT_COST;
         }
         if (keyboard.pressed("up")) {
             vector.x += moveDistance;
-            fuel -= 3;
+            fuel -= FUEL_MOVEMENT_COST;
         }
         if (keyboard.pressed("down")) {
             vector.x -= moveDistance;
-            fuel -= 3;
+            fuel -= FUEL_MOVEMENT_COST;
         }
         Utils.updateFuelIndicator(fuel);
     }
