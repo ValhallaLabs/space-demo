@@ -112,14 +112,14 @@ class Sun extends Planet {
         // multiplier for distortion speed
         let baseSpeed = 0.0002;
         // number of times to repeat texture in each direction
-        let repeatS = 2.0,
+        let repeatS = 1.5,
             repeatT = repeatS;
 
         // texture used to generate "randomness", distort all other textures
         let noiseTexture = new THREE.ImageUtils.loadTexture('images/cloud.png');
         noiseTexture.wrapS = noiseTexture.wrapT = THREE.RepeatWrapping;
         // magnitude of noise effect
-        let noiseScale = 0.04;
+        let noiseScale = 0.08;
 
         // texture to additively blend with base image texture
         let blendTexture = new THREE.ImageUtils.loadTexture('images/lava.jpg');
@@ -135,7 +135,7 @@ class Sun extends Planet {
         // multiplier for distortion speed
         let bumpSpeed = 0.15;
         // magnitude of normal displacement
-        let bumpScale = 10.0;
+        let bumpScale = 4.5;
 
         // use 'window' to create global object
         window.customUniforms = {
@@ -413,9 +413,7 @@ function move() {
     scene.add(arrow);
 
     // Find main vector
-    let resultVector = vectors.reduce((first, second) => {
-        return new THREE.Vector3().addVectors(first, second).normalize();
-    });
+    let resultVector = vectors.reduce((first, second) => new THREE.Vector3().addVectors(first, second), new THREE.Vector3(0, 0, 0));
 
     let global = 0;
     array.forEach((planet) => {
